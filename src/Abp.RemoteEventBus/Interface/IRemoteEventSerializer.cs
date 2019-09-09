@@ -1,4 +1,4 @@
-﻿namespace Abp.RemoteEventBus
+﻿namespace Abp.RemoteEventBus.Interface
 {
     public interface IRemoteEventSerializer
     {

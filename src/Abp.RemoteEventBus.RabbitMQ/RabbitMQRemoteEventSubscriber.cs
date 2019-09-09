@@ -32,7 +32,8 @@ namespace Abp.RemoteEventBus.RabbitMQ
             var existsTopics = topics.ToList().Where(p => _dictionary.ContainsKey(p));
             if (existsTopics.Any())
             {
-                throw new AbpException(string.Format("the topics {0} have subscribed already", string.Join(",", existsTopics)));
+                throw new AbpException(string.Format("the topics {0} have subscribed already",
+                    string.Join(",", existsTopics)));
             }
 
             foreach (var topic in topics)
@@ -43,7 +44,7 @@ namespace Abp.RemoteEventBus.RabbitMQ
                 {
                     var channel = connection.CreateModel();
                     var queue = _queuePrefix + topic;
-                    channel.ExchangeDeclare(_exchangeTopic, "topic",true);
+                    channel.ExchangeDeclare(_exchangeTopic, "topic", true);
                     channel.QueueDeclare(queue, true, false, false, null);
                     channel.QueueBind(queue, _exchangeTopic, topic);
                     var consumer = new EventingBasicConsumer(channel);

@@ -1,4 +1,5 @@
 ﻿using Abp.Dependency;
+using Abp.RemoteEventBus.Interface;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 

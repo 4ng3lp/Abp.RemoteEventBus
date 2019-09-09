@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Abp.Events.Bus;
 using Abp.RemoteEventBus.Events;
+using Abp.RemoteEventBus.Interface;
 
 namespace Abp.RemoteEventBus
 {

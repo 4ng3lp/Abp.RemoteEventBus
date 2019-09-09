@@ -2,6 +2,7 @@
 using RabbitMQ.Client;
 using System.Text;
 using System.Threading.Tasks;
+using Abp.RemoteEventBus.Interface;
 
 namespace Abp.RemoteEventBus.RabbitMQ
 {

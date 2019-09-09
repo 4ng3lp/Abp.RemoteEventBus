@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Confluent.Kafka.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using Abp.RemoteEventBus.Interface;
 
 namespace Abp.RemoteEventBus.Kafka
 {
@@ -10,7 +11,6 @@ namespace Abp.RemoteEventBus.Kafka
     {
         public ILogger Logger { get; set; }
 
-        private readonly IKafkaSetting _kafkaSetting;
         private readonly IRemoteEventSerializer _remoteEventSerializer;
 
         private readonly Producer<Null, string> _producer;
@@ -21,12 +21,11 @@ namespace Abp.RemoteEventBus.Kafka
         {
             Check.NotNullOrWhiteSpace(kafkaSetting.Properties["bootstrap.servers"] as string, "bootstrap.servers");
 
-            _kafkaSetting = kafkaSetting;
             _remoteEventSerializer = remoteEventSerializer;
 
             Logger = NullLogger.Instance;
 
-            _producer = new Producer<Null, string>(_kafkaSetting.Properties, null, new StringSerializer(Encoding.UTF8));
+            _producer = new Producer<Null, string>(kafkaSetting.Properties, null, new StringSerializer(Encoding.UTF8));
         }
 
         public void Publish(string topic, IRemoteEventData remoteEventData)

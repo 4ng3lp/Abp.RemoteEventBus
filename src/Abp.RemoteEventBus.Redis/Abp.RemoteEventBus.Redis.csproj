@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\common.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>wuyi</Authors>
@@ -6,7 +7,6 @@
     <Product />
     <PackageProjectUrl>https://github.com/wuyi6216/Abp.RemoteEventBus</PackageProjectUrl>
     <Description>Use Redis for Abp.RemoteEventBus</Description>
-    <Version>1.0.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Abp.RemoteEventBus\Abp.RemoteEventBus.csproj">
@@ -15,6 +15,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Abp.RedisCache" Version="3.4.0" />
+    <PackageReference Include="Abp.RedisCache" Version="4.9.0" />
   </ItemGroup>
 </Project>

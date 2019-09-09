@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\common.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>wuyi</Authors>
@@ -6,14 +7,13 @@
     <Product />
     <PackageProjectUrl>https://github.com/wuyi6216/Abp.RemoteEventBus</PackageProjectUrl>
     <Description>Use RabbitMQ for Abp.RemoteEventBus</Description>
-    <Version>1.0.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Abp.RemoteEventBus\Abp.RemoteEventBus.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Commons" Version="0.2.4.731" />
-    <PackageReference Include="Commons.Pool" Version="0.2.4.731" />
-    <PackageReference Include="RabbitMQ.Client" Version="5.0.1" />
+    <PackageReference Include="Commons" Version="0.4.0.1347" />
+    <PackageReference Include="Commons.Pool" Version="0.4.0.1347" />
+    <PackageReference Include="RabbitMQ.Client" Version="5.1.1" />
   </ItemGroup>
 </Project>

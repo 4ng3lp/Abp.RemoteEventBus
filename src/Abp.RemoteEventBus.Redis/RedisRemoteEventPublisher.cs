@@ -1,6 +1,7 @@
 ﻿using Abp.Json;
 using StackExchange.Redis;
 using System.Threading.Tasks;
+using Abp.RemoteEventBus.Interface;
 
 namespace Abp.RemoteEventBus.Redis
 {
