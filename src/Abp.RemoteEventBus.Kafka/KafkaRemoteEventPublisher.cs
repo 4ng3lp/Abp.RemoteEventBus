@@ -1,9 +1,9 @@
 ﻿using Castle.Core.Logging;
 using Confluent.Kafka;
-using Confluent.Kafka.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Abp.RemoteEventBus.Interface;
+using System.Collections.Generic;
 
 namespace Abp.RemoteEventBus.Kafka
 {
@@ -13,7 +13,7 @@ namespace Abp.RemoteEventBus.Kafka
 
         private readonly IRemoteEventSerializer _remoteEventSerializer;
 
-        private readonly Producer<Null, string> _producer;
+        private readonly IProducer<string, IDictionary<string, object>> _producer;
 
         private bool _disposed;
 
@@ -25,7 +25,10 @@ namespace Abp.RemoteEventBus.Kafka
 
             Logger = NullLogger.Instance;
 
-            _producer = new Producer<Null, string>(kafkaSetting.Properties, null, new StringSerializer(Encoding.UTF8));
+            var config = new ProducerConfig { BootstrapServers = kafkaSetting.Properties["bootstrap.servers"] as string };
+
+            _producer = new ProducerBuilder<string, IDictionary<string, object>>(config).Build();
+
         }
 
         public void Publish(string topic, IRemoteEventData remoteEventData)
@@ -37,8 +40,10 @@ namespace Abp.RemoteEventBus.Kafka
         public Task PublishAsync(string topic, IRemoteEventData remoteEventData)
         {
             Logger.Debug($"{_producer.Name} producing on {topic}");
+            var foo = _remoteEventSerializer.Serialize(remoteEventData);
 
-            var deliveryReport = _producer.ProduceAsync(topic, null, _remoteEventSerializer.Serialize(remoteEventData));
+            var deliveryReport = _producer.ProduceAsync(topic, new Message<string, IDictionary<string, object>>(){}  );
+
             return deliveryReport.ContinueWith(task =>
             {
                 Logger.Debug($"Partition: {task.Result.Partition}, Offset: {task.Result.Offset}");

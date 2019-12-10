@@ -1,6 +1,5 @@
 ﻿using Castle.Core.Logging;
 using Confluent.Kafka;
-using Confluent.Kafka.Serialization;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,7 +13,7 @@ namespace Abp.RemoteEventBus.Kafka
     {
         public ILogger Logger { get; set; }
 
-        private readonly ConcurrentDictionary<string, Consumer<Ignore, string>> _dictionary;
+        private readonly ConcurrentDictionary<string, IConsumer<Ignore, string>> _dictionary;
 
         private readonly IKafkaSetting _kafkaSetting;
 
@@ -28,7 +27,7 @@ namespace Abp.RemoteEventBus.Kafka
 
             _kafkaSetting = kafkaSetting;
 
-            _dictionary = new ConcurrentDictionary<string, Consumer<Ignore, string>>();
+            _dictionary = new ConcurrentDictionary<string, IConsumer<Ignore, string>>();
 
             Logger = NullLogger.Instance;
         }
