@@ -9,6 +9,6 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Abp" Version="4.9.0" />
+    <PackageReference Include="Abp" Version="4.3.0" />
   </ItemGroup>
 </Project>
