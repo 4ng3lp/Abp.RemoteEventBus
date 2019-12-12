@@ -15,6 +15,8 @@ namespace Abp.RemoteEventBus.Kafka
             Properties.Add("enable.auto.commit", "true");
             Properties.Add("auto.commit.interval.ms", "1000");
             Properties.Add("session.timeout.ms", "30000");
+            Properties.Add("commit.period", "5");
+            
         }
     }
 }

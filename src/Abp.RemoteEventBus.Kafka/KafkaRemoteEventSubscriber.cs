@@ -1,9 +1,9 @@
 ﻿using Castle.Core.Logging;
 using Confluent.Kafka;
-using Confluent.Kafka.Serialization;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ namespace Abp.RemoteEventBus.Kafka
     {
         public ILogger Logger { get; set; }
 
-        private readonly ConcurrentDictionary<string, Consumer<Ignore, string>> _dictionary;
+        private readonly ConcurrentDictionary<string, IConsumer<Ignore, string>> _dictionary;
 
         private readonly IKafkaSetting _kafkaSetting;
 
@@ -28,7 +28,7 @@ namespace Abp.RemoteEventBus.Kafka
 
             _kafkaSetting = kafkaSetting;
 
-            _dictionary = new ConcurrentDictionary<string, Consumer<Ignore, string>>();
+            _dictionary = new ConcurrentDictionary<string, IConsumer<Ignore, string>>();
 
             Logger = NullLogger.Instance;
         }
@@ -36,6 +36,7 @@ namespace Abp.RemoteEventBus.Kafka
         public void Subscribe(IEnumerable<string> topics, Action<string, string> handler)
         {
             var existsTopics = topics.ToList().Where(p => _dictionary.ContainsKey(p));
+ 
             if (existsTopics.Any())
             {
                 throw new AbpException(string.Format("Topics {0} have subscribed already", string.Join(",", existsTopics)));
@@ -43,48 +44,96 @@ namespace Abp.RemoteEventBus.Kafka
 
             topics.ToList().ForEach(topic =>
             {
-                var consumer = new Consumer<Ignore, string>(_kafkaSetting.Properties, null, new StringDeserializer(Encoding.UTF8));
+                var conf = new ConsumerConfig
+                {
+                    GroupId = "test-consumer-group",
+                    BootstrapServers = "localhost:9092",
+                    // Note: The AutoOffsetReset property determines the start offset in the event
+                    // there are not yet any committed offsets for the consumer group for the
+                    // topic/partitions of interest. By default, offsets are committed
+                    // automatically, so in this example, consumption will only start from the
+                    // earliest message in the topic 'my-topic' the first time you run the program.
+                    AutoOffsetReset = AutoOffsetReset.Earliest
+                };
+                var consumer = new ConsumerBuilder<Ignore, string>(conf)
+                    .SetErrorHandler((_, e) => Logger.Error($"Error: {e.Reason}"))
+                    .SetStatisticsHandler((_, json) => Console.WriteLine($"Statistics: {json}"))
+                    .SetPartitionsAssignedHandler((c, partitions) =>
+                    {
+                        Console.WriteLine($"Assigned partitions: [{string.Join(", ", partitions)}]");
+                        // possibly manually specify start offsets or override the partition assignment provided by
+                        // the consumer group by returning a list of topic/partition/offsets to assign to, e.g.:
+                        // 
+                        // return partitions.Select(tp => new TopicPartitionOffset(tp, externalOffsets[tp]));
+                    })
+                    .SetPartitionsRevokedHandler((c, partitions) =>
+                    {
+                        Console.WriteLine($"Revoking assignment: [{string.Join(", ", partitions)}]");
+                    })
+                    .Build();
 
                 _dictionary[topic] = consumer;
 
                 consumer.Subscribe(topics);
 
-                consumer.OnMessage += (_, msg) =>
-                {
-                    Logger.Debug($"Topic: {msg.Topic} Partition: {msg.Partition} Offset: {msg.Offset} {msg.Value}");
-
-                    try
-                    {
-                        handler(msg.Topic, msg.Value);
-                    }
-                    catch(Exception ex)
-                    {
-                        Logger.Error($"Consume error", ex);
-                    }
-
-                    try
-                    {
-                        var committedOffsets = consumer.CommitAsync(msg).Result;
-
-                        Logger.Debug($"Committed offset: {committedOffsets}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Commit error", ex);
-                    }
-                };
-
-                consumer.OnError += (_, error) => Logger.Error($"Error: {error}");
-
-                consumer.OnConsumeError += (_, error) => Logger.Error($"Consume error: {error}");
-
-                Task.Factory.StartNew(() =>
+                try
                 {
                     while (!_cancelled)
                     {
-                        consumer.Poll(TimeSpan.FromMilliseconds(1000));
+                        try
+                        {
+                            var consumeResult = consumer.Consume();
+
+                            if (consumeResult.IsPartitionEOF)
+                            {
+                                Debug.WriteLine(
+                                    $"Reached end of topic {consumeResult.Topic}, partition {consumeResult.Partition}, offset {consumeResult.Offset}.");
+
+                                continue;
+                            }
+                            try
+                            {
+                                handler(consumeResult.Topic, consumeResult.Message.Value);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Error($"Handler error", ex);
+                            }
+
+                            Debug.WriteLine($"Received message at {consumeResult.TopicPartitionOffset}: {consumeResult.Value}");
+
+                            if (consumeResult.Offset % (int)_kafkaSetting.Properties["commit.period"] == 0)
+                            {
+                                // The Commit method sends a "commit offsets" request to the Kafka
+                                // cluster and synchronously waits for the response. This is very
+                                // slow compared to the rate at which the consumer is capable of
+                                // consuming messages. A high performance application will typically
+                                // commit offsets relatively infrequently and be designed handle
+                                // duplicate messages in the event of failure.
+                                try
+                                {
+                                    consumer.Commit(consumeResult);
+                                }
+                                catch (KafkaException e)
+                                {
+                                    Logger.Error($"Commit error", e);
+                                    Debug.WriteLine($"Commit error: {e.Error.Reason}");
+                                }
+                            }
+                        }
+                        catch (ConsumeException e)
+                        {
+                            Logger.Error($"Consume error: {e.Error.Reason}");
+                            Debug.WriteLine($"Consume error: {e.Error.Reason}");
+                        }
                     }
-                });
+                }
+                catch (OperationCanceledException)
+                {
+                    Debug.WriteLine("Closing consumer.");
+                    consumer.Close();
+                }
+
             });
         }
 
