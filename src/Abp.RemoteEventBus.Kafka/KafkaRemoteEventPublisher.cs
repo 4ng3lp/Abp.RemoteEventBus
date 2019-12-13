@@ -42,7 +42,13 @@ namespace Abp.RemoteEventBus.Kafka
             Logger.Debug($"{_producer.Name} producing on {topic}");
             var foo = _remoteEventSerializer.Serialize(remoteEventData);
 
-            var deliveryReport = _producer.ProduceAsync(topic, new Message<string, IDictionary<string, object>>(){}  );
+            var deliveryReport = _producer.ProduceAsync(
+                topic,
+                new Message<string, IDictionary<string, object>>()
+                {
+                    Key = remoteEventData.Type,
+                    Value = remoteEventData.Data
+                });
 
             return deliveryReport.ContinueWith(task =>
             {
