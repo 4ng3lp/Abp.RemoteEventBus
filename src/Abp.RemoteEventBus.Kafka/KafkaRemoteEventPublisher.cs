@@ -1,9 +1,11 @@
-﻿using Castle.Core.Logging;
+﻿using System;
+using Castle.Core.Logging;
 using Confluent.Kafka;
 using System.Text;
 using System.Threading.Tasks;
 using Abp.RemoteEventBus.Interface;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
 namespace Abp.RemoteEventBus.Kafka
 {
@@ -11,24 +13,31 @@ namespace Abp.RemoteEventBus.Kafka
     {
         public ILogger Logger { get; set; }
 
+        private readonly IKafkaSetting _kafkaSetting;
         private readonly IRemoteEventSerializer _remoteEventSerializer;
 
-        private readonly IProducer<string, IDictionary<string, object>> _producer;
+        private readonly IProducer<string, string> _producer;
 
         private bool _disposed;
 
-        public KafkaRemoteEventPublisher(IKafkaSetting kafkaSetting, IRemoteEventSerializer remoteEventSerializer)
+        public KafkaRemoteEventPublisher(
+            [NotNull] IKafkaSetting kafkaSetting,
+            [NotNull] IRemoteEventSerializer remoteEventSerializer)
         {
+            if (kafkaSetting == null) throw new ArgumentNullException(nameof(kafkaSetting));
+            if (remoteEventSerializer == null) throw new ArgumentNullException(nameof(remoteEventSerializer));
+           
             Check.NotNullOrWhiteSpace(kafkaSetting.Properties["bootstrap.servers"] as string, "bootstrap.servers");
 
+            _kafkaSetting = kafkaSetting;
             _remoteEventSerializer = remoteEventSerializer;
 
             Logger = NullLogger.Instance;
 
-            var config = new ProducerConfig { BootstrapServers = kafkaSetting.Properties["bootstrap.servers"] as string };
+            var config = new ProducerConfig{ BootstrapServers = kafkaSetting.Properties["bootstrap.servers"] as string };
 
-            _producer = new ProducerBuilder<string, IDictionary<string, object>>(config).Build();
-
+            _producer = new ProducerBuilder<string, string>(config)
+                .Build();
         }
 
         public void Publish(string topic, IRemoteEventData remoteEventData)
@@ -40,14 +49,14 @@ namespace Abp.RemoteEventBus.Kafka
         public Task PublishAsync(string topic, IRemoteEventData remoteEventData)
         {
             Logger.Debug($"{_producer.Name} producing on {topic}");
-            var foo = _remoteEventSerializer.Serialize(remoteEventData);
+            
+            var stringData = _remoteEventSerializer.Serialize(remoteEventData.Data);
 
-            var deliveryReport = _producer.ProduceAsync(
-                topic,
-                new Message<string, IDictionary<string, object>>()
+            var deliveryReport = _producer.ProduceAsync(topic,
+                new Message<string, string>()
                 {
                     Key = remoteEventData.Type,
-                    Value = remoteEventData.Data
+                    Value = stringData
                 });
 
             return deliveryReport.ContinueWith(task =>
