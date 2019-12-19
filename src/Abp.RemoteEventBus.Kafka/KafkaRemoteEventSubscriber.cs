@@ -39,7 +39,9 @@ namespace Abp.RemoteEventBus.Kafka
  
             if (existsTopics.Any())
             {
-                throw new AbpException(string.Format("Topics {0} have subscribed already", string.Join(",", existsTopics)));
+                return;
+                //TODO разобраться, почему пробрасывается  Exception
+                //throw new AbpException(string.Format("Topics {0} have subscribed already", string.Join(",", existsTopics)));
             }
 
             topics.ToList().ForEach(topic =>
@@ -102,7 +104,7 @@ namespace Abp.RemoteEventBus.Kafka
 
                             Debug.WriteLine($"Received message at {consumeResult.TopicPartitionOffset}: {consumeResult.Value}");
 
-                            if (consumeResult.Offset % (int)_kafkaSetting.Properties["commit.period"] == 0)
+                            if (consumeResult.Offset % Convert.ToInt32(_kafkaSetting.Properties["commit.period"]) == 0)
                             {
                                 // The Commit method sends a "commit offsets" request to the Kafka
                                 // cluster and synchronously waits for the response. This is very
