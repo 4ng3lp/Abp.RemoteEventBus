@@ -53,7 +53,8 @@ namespace Abp.RemoteEventBus.Impl
         public void HandleEvent(RemoteEventArgs eventArgs)
         {
             var key = eventArgs.EventData.Type;
-            if (_typeMapping.ContainsKey(key))
+            //TODO Корректно обработать ситуацию с Key = null
+            if (key != null && _typeMapping.ContainsKey(key))
             {
                 var tuples = _typeMapping[key].OrderBy(p => p.Item2.Order).ToList();
                 foreach (var tuple in tuples)
