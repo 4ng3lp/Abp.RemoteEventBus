@@ -32,9 +32,14 @@ namespace Abp.RemoteEventBus.Impl
 
             _typeMapping = new Dictionary<string, List<Tuple<Type, RemoteEventHandlerAttribute>>>();
 
-            _typeFinder.Find(type => Attribute.IsDefined(type, typeof(RemoteEventHandlerAttribute), false) && typeof(IRemoteEventHandler).IsAssignableFrom(type))
-                .ToList().ForEach(type =>
-                {
+            //Перечень типов, на которые повешаны атрибуты RemoteEventHandlerAttribute
+            var typeList = _typeFinder.Find(type =>
+                Attribute.IsDefined(type, typeof(RemoteEventHandlerAttribute), false) &&
+                typeof(IRemoteEventHandler).IsAssignableFrom(type));
+            foreach(var type in typeList)
+            {
+                ///TODO проблема в том, что на отдельных тапах могут весеть более одного атрибута
+                /// что собственно не запрещено в описании атрибута
                     var attribute = Attribute.GetCustomAttribute(type, typeof(RemoteEventHandlerAttribute)) as RemoteEventHandlerAttribute;
                     var key = attribute.ForType;
                     var item = new Tuple<Type, RemoteEventHandlerAttribute>(type, attribute);
@@ -47,7 +52,7 @@ namespace Abp.RemoteEventBus.Impl
                     {
                         _typeMapping.Add(key, new List<Tuple<Type, RemoteEventHandlerAttribute>>(new[] { item }));
                     }
-                });
+             }
         }
 
         public void HandleEvent(RemoteEventArgs eventArgs)
