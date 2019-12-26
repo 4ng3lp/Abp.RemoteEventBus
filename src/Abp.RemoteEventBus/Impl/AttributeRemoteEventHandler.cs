@@ -49,30 +49,30 @@ namespace Abp.RemoteEventBus.Impl
             var typeList = _typeFinder.Find(type =>
                 Attribute.IsDefined(type, typeof(RemoteEventHandlerAttribute), false) &&
                 typeof(IRemoteEventHandler).IsAssignableFrom(type));
-            
-            foreach(var type in typeList)
+
+            foreach (var type in typeList)
             {
                 ///TODO проблема в том, что на отдельных тапах могут весеть более одного атрибута
                 /// что собственно не запрещено в описании атрибута
                 /// поэтому нужно изменить код так, чтобы можно было регистрировать обработчики
                 /// с несколькими атрибутами
-                    var attribute = Attribute.GetCustomAttribute(type, typeof(RemoteEventHandlerAttribute)) as RemoteEventHandlerAttribute;
-                    //обработчик относится к данным определенного типа
-                    var key = attribute.ForType;
-                    var item = (handlerTyp: type, attribute : attribute);
-                    if (_typeMapping.ContainsKey(key))
-                    {
-                        //если уже в маппинге зарегистрирован тип данных с обработчиками
-                        //то  в список добавляется еще один обработчик на тот же ключевой тип
-                        var list = _typeMapping[key];
-                        list.Add(item);
-                    }
-                    else
-                    {
-                        //или же создается новая запись в Dictionary с новым ключем по типу данных
-                        _typeMapping.Add(key, new List<(Type handlerType, RemoteEventHandlerAttribute attribute)>(new[] { item }));
-                    }
-             }
+                var attribute = Attribute.GetCustomAttribute(type, typeof(RemoteEventHandlerAttribute)) as RemoteEventHandlerAttribute;
+                //обработчик относится к данным определенного типа
+                var key = attribute.ForType;
+                var item = (handlerTyp: type, attribute: attribute);
+                if (_typeMapping.ContainsKey(key))
+                {
+                    //если уже в маппинге зарегистрирован тип данных с обработчиками
+                    //то  в список добавляется еще один обработчик на тот же ключевой тип
+                    var list = _typeMapping[key];
+                    list.Add(item);
+                }
+                else
+                {
+                    //или же создается новая запись в Dictionary с новым ключем по типу данных
+                    _typeMapping.Add(key, new List<(Type handlerType, RemoteEventHandlerAttribute attribute)>(new[] { item }));
+                }
+            }
         }
 
         public void HandleEvent(RemoteEventArgs eventArgs)
