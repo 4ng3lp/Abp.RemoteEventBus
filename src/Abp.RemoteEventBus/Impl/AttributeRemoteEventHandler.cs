@@ -52,72 +52,75 @@ namespace Abp.RemoteEventBus.Impl
 
             foreach (var type in typeList)
             {
-                ///TODO проблема в том, что на отдельных тапах могут весеть более одного атрибута
-                /// что собственно не запрещено в описании атрибута
-                /// поэтому нужно изменить код так, чтобы можно было регистрировать обработчики
-                /// с несколькими атрибутами
-                var attribute = Attribute.GetCustomAttribute(type, typeof(RemoteEventHandlerAttribute)) as RemoteEventHandlerAttribute;
-                //обработчик относится к данным определенного типа
-                var key = attribute.ForType;
-                var item = (handlerTyp: type, attribute: attribute);
-                if (_typeMapping.ContainsKey(key))
+                var attributes =
+                    (RemoteEventHandlerAttribute[]) Attribute.GetCustomAttributes(type,
+                        typeof(RemoteEventHandlerAttribute));
+
+                foreach (var attribute in attributes)
                 {
-                    //если уже в маппинге зарегистрирован тип данных с обработчиками
-                    //то  в список добавляется еще один обработчик на тот же ключевой тип
-                    var list = _typeMapping[key];
-                    list.Add(item);
-                }
-                else
-                {
-                    //или же создается новая запись в Dictionary с новым ключем по типу данных
-                    _typeMapping.Add(key, new List<(Type handlerType, RemoteEventHandlerAttribute attribute)>(new[] { item }));
+                    //обработчик относится к данным определенного типа
+                    var key = attribute.ForType;
+                    var item = (handlerTyp: type, attribute: attribute);
+                    if (_typeMapping.ContainsKey(key))
+                    {
+                        //если уже в маппинге зарегистрирован тип данных с обработчиками
+                        //то  в список добавляется еще один обработчик на тот же ключевой тип
+                        var list = _typeMapping[key];
+                        list.Add(item);
+                    }
+                    else
+                    {
+                        //или же создается новая запись в Dictionary с новым ключем по типу данных
+                        _typeMapping.Add(key,
+                            new List<(Type handlerType, RemoteEventHandlerAttribute attribute)>(new[] {item}));
+                    }
                 }
             }
         }
 
         public void HandleEvent(RemoteEventArgs eventArgs)
-        {
-            var dataType = eventArgs.EventData.Type;
-            //TODO Корректно обработать ситуацию с Key = null
-            //Находим в маппинге наборы хендлеров для указанного типа данных в сообщении
-            if (dataType != null && _typeMapping.ContainsKey(dataType))
             {
-                //Достаем все хендлеры с соответсвующими им трибутами
-                var handlerPairs = _typeMapping[dataType].OrderBy(p => p.Item2.Order).ToList();
-
-                //Запускаются все обработчики если они соответсвуют топику сообщения
-                foreach (var handlerPair in handlerPairs)
+                var dataType = eventArgs.EventData.Type;
+                //TODO Корректно обработать ситуацию с Key = null
+                //Находим в маппинге наборы хендлеров для указанного типа данных в сообщении
+                if (dataType != null && _typeMapping.ContainsKey(dataType))
                 {
-                    //Если зарегистрированные хендлеры не подходят под топик сообщения
-                    if (handlerPair.Item2.OnlyHandleThisTopic && eventArgs.Topic != handlerPair.Item2.ForTopic)
-                    {
-                        continue;
-                    }
+                    //Достаем все хендлеры с соответсвующими им трибутами
+                    var handlerPairs = _typeMapping[dataType].OrderBy(p => p.Item2.Order).ToList();
 
-                    try
+                    //Запускаются все обработчики если они соответсвуют топику сообщения
+                    foreach (var handlerPair in handlerPairs)
                     {
-                        ///инстанцируется по типу хендлера 
-                        var handler = _iocResolver.Resolve<IRemoteEventHandler>(handlerPair.handlerType);
-                        handler.HandleEvent(eventArgs);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("Exception occurred when handle remoteEventArgs", ex);
-
-                        _eventBus.Trigger(this, new RemoteEventHandleExceptionData(ex, eventArgs));
-
-                        if (handlerPair.Item2.SuspendWhenException)
+                        //Если зарегистрированные хендлеры не подходят под топик сообщения
+                        if (handlerPair.Item2.OnlyHandleThisTopic && eventArgs.Topic != handlerPair.Item2.ForTopic)
                         {
-                            eventArgs.Suspended = true;
+                            continue;
                         }
-                    }
 
-                    if (eventArgs.Suspended)
-                    {
-                        break;
+                        try
+                        {
+                            ///инстанцируется по типу хендлера 
+                            var handler = _iocResolver.Resolve<IRemoteEventHandler>(handlerPair.handlerType);
+                            handler.HandleEvent(eventArgs);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error("Exception occurred when handle remoteEventArgs", ex);
+
+                            _eventBus.Trigger(this, new RemoteEventHandleExceptionData(ex, eventArgs));
+
+                            if (handlerPair.Item2.SuspendWhenException)
+                            {
+                                eventArgs.Suspended = true;
+                            }
+                        }
+
+                        if (eventArgs.Suspended)
+                        {
+                            break;
+                        }
                     }
                 }
             }
         }
     }
-}
