@@ -2,11 +2,13 @@
   <Import Project="..\common.props" />
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Authors>wuyi</Authors>
+    <Authors>itPanacea company</Authors>
     <Company />
     <Product />
     <PackageProjectUrl>https://github.com/wuyi6216/Abp.RemoteEventBus</PackageProjectUrl>
     <Description>Use Kafka for Abp.RemoteEventBus</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>4.10</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Abp.RemoteEventBus\Abp.RemoteEventBus.csproj" />
